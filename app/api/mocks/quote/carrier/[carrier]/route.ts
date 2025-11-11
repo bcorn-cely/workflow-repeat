@@ -1,4 +1,6 @@
-
+type QuoteCarrierParams = {
+    carrier: string;
+}
 
 function shouldFlake(carrier: string) {
   const target = (process.env.DEMO_FLAKY_CARRIER ?? '').toLowerCase();
@@ -6,8 +8,9 @@ function shouldFlake(carrier: string) {
   return Math.random() < 0.5; // 50% rate-limit to demo retries
 }
 
-export async function POST(req: Request, { params }: { params: { carrier: string } }) {
-  const carrier = params.carrier;
+export async function POST(req: Request, { params }: { params: QuoteCarrierParams }) {
+  const searchParams = await params;
+  const carrier = searchParams.carrier;
   if (shouldFlake(carrier)) {
     return new Response('rate limited', { status: 429 });
   }

@@ -12,13 +12,12 @@ export async function ChatbotWrapper() {
   if (!chatId) {
     chatId = await createChat()
     // Set the cookie with the new chatId using Server Action
-    await setChatIdCookie(chatId)
   }
 
   // Fetch initial messages for this chat
   const messages = await loadChatMessages(chatId)
   const initialMessages: ChatUIMessage[] = convertSelectMessagesToChatUIMessages(messages)
 
-  return <Chatbot id={chatId} initialMessages={initialMessages} />
+  return <Chatbot id={chatId} initialMessages={initialMessages}  />
 }
 

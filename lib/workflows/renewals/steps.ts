@@ -1,5 +1,5 @@
 // workflows/renewal.ts
-import { sleep, createWebhook, FatalError, RetryableError } from 'workflow';
+import { sleep, createWebhook, FatalError, RetryableError, fetch } from 'workflow';
 
 export type RenewalInput = {
   accountId: string;
@@ -24,42 +24,10 @@ const QUOTE  = process.env.QUOTE  ?? `${BASE}/api/mocks`;
 const SUMMARY= process.env.SUMMARY?? `${BASE}/api/mocks`;
 const NOTIFY = process.env.NOTIFY ?? `${BASE}/api/mocks`;
 
-// export async function renewalWorkflow(input: RenewalInput): Promise<RenewalResult> {
-//   "use workflow";
-
-//   const writable = getWritable();
-//   await writeProgress(writable, `Starting renewal for ${input.accountId}`);
-
-//   const sov = await extractSoV(input.sovFileId);
-//   await writeProgress(writable, `Parsed SoV rows: ${sov?.rows ?? 0}`);
-
-//   const loss = await getLossTrends(input.accountId);
-//   await writeProgress(writable, `Loaded loss trends for ${input.accountId}`);
-
-//   const quotes = await Promise.all(input.carriers.map((c) => quoteCarrier(c, sov, loss)));
-//   await writeProgress(writable, `Received ${quotes.length} carrier quotes`);
-
-//   const compliance = await complianceCheck({ quotes, state: input.state });
-//   if (!compliance.ok) throw new FatalError(`Compliance failed: ${(compliance.reasons ?? []).join(', ')}`);
-
-//   await writeProgress(writable, `Awaiting broker approval…`);
-//   const approval = await waitForBrokerApproval(input.brokerEmail);
-//   if (!approval.approved) throw new FatalError('Broker rejected the recommendation');
-
-//   const summaryUrl = await compileMarketSummary({
-//     accountId: input.accountId,
-//     quotes,
-//     notes: approval.comment,
-//   });
-//   await writeProgress(writable, `Market summary ready: ${summaryUrl}`);
-
-//   await writeProgress(writable, 'Renewal complete');
-//   return { accountId: input.accountId, quotes, compliance, summaryUrl };
-// }
 
 /** ---------- Durable steps ---------- */
 
-async function extractSoV(fileId: string) {
+export async function extractSoV(fileId: string) {
   "use step";
   const res = await fetch(`${DOCSVC}/sov/${fileId}`);
   if (!res.ok) throw new Error(`extractSoV failed: ${res.status}`);
@@ -67,14 +35,14 @@ async function extractSoV(fileId: string) {
 }
 (extractSoV as any).maxRetries = 3;
 
-async function getLossTrends(accountId: string) {
+export async function getLossTrends(accountId: string) {
   "use step";
   const res = await fetch(`${LOSS}/losses/${accountId}`);
   if (!res.ok) throw new Error(`loss trends failed: ${res.status}`);
   return res.json();
 }
 
-async function quoteCarrier(carrier: string, sov: any, loss: any) {
+export async function quoteCarrier(carrier: string, sov: any, loss: any) {
   "use step";
   const res = await fetch(`${QUOTE}/quote/carrier/${carrier}`, {
     method: 'POST',
@@ -90,13 +58,13 @@ async function quoteCarrier(carrier: string, sov: any, loss: any) {
 }
 (quoteCarrier as any).maxRetries = 5;
 
-async function complianceCheck(input: { quotes: any[]; state: string }) {
+export async function complianceCheck(input: { quotes: any[]; state: string }) {
   "use step";
   const ok = input.quotes.length > 0;
   return ok ? { ok: true } : { ok: false, reasons: ['No bindable quotes'] };
 }
 
-async function compileMarketSummary(payload: any) {
+export async function compileMarketSummary(payload: any) {
   "use step";
   const res = await fetch(`${SUMMARY}/summary/compile`, {
     method: 'POST',
@@ -110,7 +78,7 @@ async function compileMarketSummary(payload: any) {
 
 /** ---------- Human-in-the-loop via webhook ---------- */
 
-async function waitForBrokerApproval(brokerEmail: string) {
+export async function waitForBrokerApproval(brokerEmail: string) {
   "use workflow";
   const webhook = createWebhook({ respondWith: Response.json({ received: true }) });
   await sendApprovalRequest(brokerEmail, webhook.url);
@@ -119,7 +87,7 @@ async function waitForBrokerApproval(brokerEmail: string) {
   return data as { approved: boolean; comment?: string };
 }
 
-async function sendApprovalRequest(email: string, url: string) {
+export async function sendApprovalRequest(email: string, url: string) {
   "use step";
   await fetch(`${NOTIFY}/notify/email`, {
     method: 'POST',

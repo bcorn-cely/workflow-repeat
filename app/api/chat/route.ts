@@ -3,29 +3,23 @@ import {
     streamText, 
     validateUIMessages, 
     createIdGenerator,
-    generateObject
+    generateObject,
+    stepCountIs
   } from "ai"
   import { saveChatMessages, loadChatMessages, convertUIMessagesToNewMessages, convertSelectMessagesToChatUIMessages, ChatUIMessage } from "@/lib/chat"
   import { z } from "zod"
   import { updateChatTitle } from "@/db/operations/chat"
-  
+  import { fetchJson } from "@/lib/utils"
+  import { RenewalInput } from "@/lib/workflows/renewals/steps"
   
   export const maxDuration = 30
   
   
   export async function POST(req: Request) {
-    const { message, chatId } = await req.json()
+    const { message, chatId, model } = await req.json()
   
-    const systemPrompt = `You are a helpful real estate assistant for Premier Properties, a luxury real estate company. 
-    
-    Your role is to:
-    - Help users find information about properties
-    - Answer questions about buying, selling, or renting real estate
-    - Provide general real estate market insights
-    - Guide users to contact the team for specific property inquiries
-    - Be professional, knowledgeable, and friendly
-    
-    Keep responses concise and helpful. If users ask about specific properties, encourage them to contact the team directly for the most up-to-date information and to schedule viewings.`
+    const systemPrompt = `Your role is to act as a representative of the insurance company speaking with customers. Some customers may ask you to complete nuanced tasks which you will have tools for. Otheres my have 
+        general questions. If a customer is trying to make a request for someting like renewals and doesn't provide all the data you need it's up to you to make sure you get it! You also have tools available to you to help with completing tasks`
   
     let validatedMessages: ChatUIMessage[];
   
@@ -53,12 +47,55 @@ import {
     });
   
     const result = streamText({
-      model: "openai/gpt-5-mini", // AI Gateway model format
+      model: model || "openai/gpt-5-mini", // AI Gateway model format
       messages: convertToModelMessages(validatedMessages),
       system: systemPrompt,
       abortSignal: req.signal,
       temperature: 0.7,
-      // maxSteps: 10,
+      stopWhen: stepCountIs(10),
+      tools: {
+        getLossTrends: {
+            description: 'loss frequency/severity by year for an account',
+            inputSchema: z.object({
+                accountId: z.string(),
+            }),
+            execute: async ({ accountId }) => fetchJson(`/api/mocks/losses/${accountId}`)
+        },
+        extractSov: {
+            description: 'Parse SOV and normalize values',
+            inputSchema: z.object({
+                sovFileId: z.string(),
+            }),
+            execute: async ({ sovFileId }) => fetchJson(`/api/mocks/sov/${sovFileId}`)
+        },
+        startRenewalWorkflow: {
+            description: 'Kick off durable orchestration of renewal workflow',
+            inputSchema: z.object({
+                accountId: z.string(),
+                effectiveDate: z.string(),
+                sovFileId: z.string(),
+                state: z.string(),
+                brokerEmail: z.string(),
+                carriers: z.array(z.string()),
+            }),
+            execute: async ( accountData: RenewalInput) => fetchJson(`/api/workflows/renewal`, { method: 'POST', body: JSON.stringify({ chatId, accountData }) })
+        },
+        restartRenewalWorkflow: {
+            description: 'Restart durable orchestration of renewal workflow',
+            inputSchema: z.object({
+                runId: z.string(),
+                accountData: z.object({
+                    accountId: z.string(),
+                    effectiveDate: z.string(),
+                    sovFileId: z.string(),
+                    state: z.string(),
+                    brokerEmail: z.string(),
+                    carriers: z.array(z.string()),
+                }),
+            }),
+            execute: async ({ runId, accountData }) => fetchJson(`/api/workflows/renewal/restart`, { method: 'POST', body: JSON.stringify({ runId, accountData }) })
+        },
+      }
     })
   
     return result.toUIMessageStreamResponse({

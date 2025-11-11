@@ -1,20 +1,30 @@
 "use client"
 import { DefaultChatTransport } from "ai"
 import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, startTransition } from "react"
 import { useChat, type UIMessage } from "@ai-sdk/react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { MessageCircle, X, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { setChatIdCookie } from "@/actions"
 
-export function Chatbot({ id, initialMessages }: { id?: string | undefined; initialMessages?: UIMessage[] } = {}) {
+export function Chatbot({ id, initialMessages }: { id: string; initialMessages?: UIMessage[] }) {
   const [isOpen, setIsOpen] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
   const [input, setInput] = useState("")
 
+  // Setting the chatId Cookie
+  useEffect(() => {
+    startTransition(async () => {
+      await setChatIdCookie(id)
+    })
+
+  }, [id])
+
+  // AI Messages for the chat which are loaded from the database if they exist
   const { messages, sendMessage } = useChat({
     id,
     messages: initialMessages,

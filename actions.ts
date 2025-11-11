@@ -12,4 +12,5 @@ export async function setChatIdCookie(chatId: string) {
         sameSite: "lax",
         maxAge: CHAT_ID_COOKIE_MAX_AGE,
     })
+    return chatId;
 }

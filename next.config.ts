@@ -1,4 +1,3 @@
-/** @type {import('next').NextConfig} */
 import { withWorkflow } from 'workflow/next';
 
 const nextConfig = {
