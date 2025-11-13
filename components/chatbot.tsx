@@ -1,8 +1,9 @@
 "use client"
-import { DefaultChatTransport } from "ai"
 import type React from "react"
 import { useState, useRef, useEffect, startTransition } from "react"
 import { useChat, type UIMessage } from "@ai-sdk/react"
+//@ts-ignore
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,6 +20,75 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+// Tool view component for rendering tool invocations inline
+function RenewalWorkflowToolView({ 
+  invocation, 
+  addToolApprovalResponse 
+}: { 
+  invocation: any
+  addToolApprovalResponse: (response: { id: string; approved: boolean }) => void
+}) {
+  if (invocation.state === 'approval-requested') {
+    return (
+      <div className="p-3 border rounded mb-2 bg-yellow-50 dark:bg-yellow-900/20 max-w-[85%]">
+        <div className="text-sm mb-2">
+          Approve <b>{invocation.name}</b>?
+          <pre className="text-xs bg-muted p-2 rounded mt-1 overflow-x-auto">
+            {JSON.stringify(invocation.input, null, 2)}
+          </pre>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() =>
+              addToolApprovalResponse({
+                id: invocation.approval.id,
+                approved: true,
+              })
+            }
+          >
+            Approve
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              addToolApprovalResponse({
+                id: invocation.approval.id,
+                approved: false,
+              })
+            }
+          >
+            Deny
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (invocation.state === 'output-available') {
+    return (
+      <div className="max-w-[85%] text-xs bg-slate-50 dark:bg-slate-900 border rounded p-2 overflow-x-auto">
+        <div className="font-semibold mb-1">Workflow Started</div>
+        {invocation.output?.runId && (
+          <div className="text-muted-foreground">Run ID: {invocation.output.runId}</div>
+        )}
+      </div>
+    )
+  }
+
+  // Handle other states (partial, error, etc.)
+  if (invocation.state === 'partial') {
+    return (
+      <div className="max-w-[85%] text-xs bg-muted/50 border rounded p-2">
+        Processing {invocation.name}...
+      </div>
+    )
+  }
+
+  return null
+}
 
 const AI_MODELS = [
   { id: "openai/gpt-5-mini", name: "GPT-4o Mini", provider: "OpenAI" },
@@ -44,17 +114,19 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
       await setChatIdCookie(id)
     })
   }, [id])
-
-  const { messages, sendMessage, status } = useChat({
+  //@ts-ignore
+  const { messages, sendMessage, status, addToolApprovalResponse } = useChat({
     id,
     messages: initialMessages,
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      prepareSendMessagesRequest({ messages, id }) {
-        return { body: { message: messages[messages.length - 1], chatId: id, model: selectedModel } }
+      prepareSendMessagesRequest({ messages, id }: { messages: UIMessage[]; id: string }) {
+        return { body: { messages, chatId: id, model: selectedModel } };
       },
     }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   })
+
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -138,24 +210,35 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
                 : "fixed bottom-24 right-6 z-40 w-[420px] h-[650px]",
             )}
           >
-            <div className="px-6 pb-5 pt-4 border-b border-primary/20 bg-gradient-to-r from-primary via-primary/90 to-accent text-primary-foreground rounded-t-xl">
-              <div className="flex items-center justify-between">
+            <div className="px-6 pb-5 pt-4 border-b border-primary/20 bg-gradient-to-r from-primary via-primary/90 to-accent text-primary-foreground rounded-t-xl" style={{ minHeight: 'fit-content' }}>
+              <div className="flex items-center justify-between" style={{ contain: 'layout style' }}>
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
                   <h3 className="font-semibold text-lg">Newfront Intelligence</h3>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 relative" style={{ contain: 'layout', transform: 'translateZ(0)' }}>
                   <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 hover:bg-primary-foreground/10 text-primary-foreground"
+                        className="h-8 w-8 min-w-8 min-h-8 hover:bg-primary-foreground/10 text-primary-foreground focus-visible:ring-0 focus-visible:ring-offset-0 outline-none focus:outline-none data-[state=open]:bg-primary-foreground/10"
+                        style={{ willChange: 'auto', transform: 'translateZ(0)' }}
                       >
                         <Settings className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-64" onCloseAutoFocus={(e) => e.preventDefault()}>
+                    <DropdownMenuContent 
+                      align="end" 
+                      className="w-64" 
+                      onCloseAutoFocus={(e) => e.preventDefault()}
+                      style={{ 
+                        willChange: 'transform',
+                        transform: 'translateZ(0)',
+                        backfaceVisibility: 'hidden',
+                        animation: 'none'
+                      }}
+                    >
                       <DropdownMenuLabel>Select AI Model</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       {AI_MODELS.map((model) => (
@@ -225,7 +308,7 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
               )}
 
               {messages.map((message) => (
-                <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                <div key={message.id} className={cn("flex flex-col gap-2", message.role === "user" ? "items-end" : "items-start")}>
                   <div
                     className={cn(
                       "max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm",
@@ -253,6 +336,35 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
                       {message.parts.map((part) => (part.type === "text" ? part.text : "")).join("")}
                     </ReactMarkdown>
                   </div>
+                  
+                  {/* Tool invocations - render inline with assistant messages */}
+                  {message.role === "assistant" &&
+                    message.parts
+                      ?.filter((p: any) => p.type?.startsWith('tool-'))
+                      .map((part: any, i: number) => {
+                        // Convert tool part to invocation format
+                        const toolName = part.type.replace('tool-', '')
+                        const invocation = {
+                          id: part.toolCallId || `tool-${i}`,
+                          name: toolName,
+                          input: part.input || {},
+                          state: part.state || 'partial',
+                          approval: part.approval,
+                          output: part.output,
+                        }
+                        
+                        // Only render if it's a tool we want to show (e.g., startRenewalWorkflow)
+                        if (toolName === 'startRenewalWorkflow') {
+                          return (
+                            <RenewalWorkflowToolView
+                              key={invocation.id}
+                              invocation={invocation}
+                              addToolApprovalResponse={addToolApprovalResponse}
+                            />
+                          )
+                        }
+                        return null
+                      })}
                 </div>
               ))}
 

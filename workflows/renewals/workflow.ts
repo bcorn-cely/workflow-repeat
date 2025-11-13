@@ -1,4 +1,4 @@
-import { FatalError, sleep } from 'workflow';
+import { sleep } from 'workflow';
 import { complianceCheck, extractSoV, getLossTrends, quoteCarrier, RenewalInput, sendBrokerApprovalRequest, compileMarketSummary} from './steps';
 import { emitEvent, aiTell } from '../events';
 import { brokerApprovalHook } from './hooks';
@@ -54,7 +54,7 @@ export async function renewal(input: RenewalInput) {
     });
 
     if (!decision.approved) {
-        throw new FatalError("Broker rejected or timed out");
+        await aiTell(`Broker did not respond in time`, { token });
     }
 
     const summaryUrl = await compileMarketSummary({

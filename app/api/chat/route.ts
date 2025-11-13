@@ -1,153 +1,101 @@
 import {
-    convertToModelMessages,
-    streamText,
-    validateUIMessages,
-    generateObject,
-    stepCountIs,
-    createUIMessageStream,
-    createUIMessageStreamResponse,
-  } from "ai"
-  import { loadChatMessages, convertSelectMessagesToChatUIMessages, convertUIMessagesToNewMessages, saveChatMessages, getChat, type ChatUIMessage } from "@/lib/chat"
-  import { z } from "zod"
-  import { updateChatTitle, createChat } from "@/db/operations/chat"
-  import { fetchJson } from "@/lib/utils"
-  import type { RenewalInput } from "@/lib/workflows/renewals/steps"
-  import { start } from "workflow/api"
-  import { renewal } from "@/lib/workflows/renewals/workflow"
-  
-  export const maxDuration = 60
-  
-  // Define a minimal message type; the client will look for "ai-notification" parts.
-  type ChatDataParts = {
-    "ai-notification": { message: string; approvalUrl?: string; token?: string; email?: string }
-    "progress-line": { text: string }
+    // @ts-ignore
+  createAgentUIStream,
+  createUIMessageStreamResponse,
+  validateUIMessages,
+} from 'ai';
+import { createRenewalAgent } from '@/workflows/renewals/agent/renewal-agent';
+import { getRun } from 'workflow/api';
+import { loadChatMessages, convertSelectMessagesToChatUIMessages, convertUIMessagesToNewMessages, saveChatMessages, getChat, type ChatUIMessage } from '@/lib/chat';
+import { createChat } from '@/db/operations/chat';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  const { messages, chatId, model: modelId } = body as {
+    messages?: ChatUIMessage[];
+    chatId?: string;
+    model?: string;
+  };
+
+  // Handle chat history if chatId is provided
+  // IMPORTANT: When messages are provided (including after approval), use them directly
+  // The client sends the complete conversation state, so we should trust it
+  let allMessages: ChatUIMessage[] = messages || [];
+  if (chatId) {
+    // Ensure the chat exists
+    const existingChat = await getChat(chatId);
+    if (!existingChat) {
+      await createChat({ id: chatId });
+    }
+
+    // If messages are provided, use them directly (client has the full conversation state)
+    // Only load from DB if no messages are provided
+    if (messages && messages.length > 0) {
+      allMessages = messages;
+      
+      // Save new user messages to DB for persistence (avoid duplicates)
+      const previousMessages = await loadChatMessages(chatId);
+      const existingIds = new Set(previousMessages.map(m => m.id));
+      const newUserMessages = allMessages.filter(m => m.role === 'user' && !existingIds.has(m.id));
+      if (newUserMessages.length > 0) {
+        const userMessagesToSave = convertUIMessagesToNewMessages(newUserMessages, chatId);
+        await saveChatMessages({ messages: userMessagesToSave });
+      }
+    } else {
+      // No messages provided, load from DB
+      const previousMessages = await loadChatMessages(chatId);
+      allMessages = convertSelectMessagesToChatUIMessages(previousMessages);
+    }
   }
-  type ChatMessage = import("ai").UIMessage<never, ChatDataParts>
-  
-  export async function POST(req: Request) {
-    const { message, chatId, model } = (await req.json()) as {
-      message?: ChatMessage
-      chatId?: string
-      model?: string
+
+  console.log(`allMessages: ${chatId}`, allMessages);
+
+  // Filter out invalid messages (empty parts, etc.) before validation
+  const validMessages = allMessages.filter((message) => {
+    // Messages must have at least one part
+    if (!message.parts || message.parts.length === 0) {
+      return false;
     }
-  
-    const systemPrompt = `You are Newfront Intelligence, an AI assistant for Newfront Insurance. You help insurance brokers and clients with:
-      
-      - Policy renewals and workflow management
-      - Loss trend analysis and risk assessment
-      - Statement of Values (SOV) extraction and processing
-      - Carrier quote requests and comparisons
-      - Account insights and recommendations
-      
-      When responding:
-      - Use markdown formatting for clear, readable messages
-      - Include headers (##), lists, **bold**, and *italic* for emphasis
-      - Be professional yet conversational
-      - If customers need to complete tasks like renewals but don't provide all required data, you can generate sample data for testing purposes
-      - Leverage available tools to complete insurance-specific tasks
-      
-      You represent Newfront's commitment to modern, efficient insurance operations.`
-  
-    let validatedMessages: ChatUIMessage[] = []
+    return true;
+  });
 
-    // Only process messages if we have a message and chatId
-    if (message && chatId) {
-      // Ensure the chat exists before saving messages
-      const existingChat = await getChat(chatId)
-      if (!existingChat) {
-        await createChat({ id: chatId })
-      }
-      
-      // Save the user message immediately
-      const userMessages = convertUIMessagesToNewMessages([message as any as ChatUIMessage], chatId)
-      await saveChatMessages({ messages: userMessages })
+  console.log(`validMessages: ${chatId}`, validMessages);
 
-      const previousMessages = await loadChatMessages(chatId)
+  // Validate messages
+  const validatedMessages = await validateUIMessages({
+    messages: validMessages,
+  });
 
-      if (!previousMessages || previousMessages.length === 0) {
-        const firstPart = message.parts[0]
-        const userText = firstPart && "text" in firstPart ? firstPart.text : ""
-        const {
-          object: { title },
-        } = await generateObject({
-          model: "openai/gpt-5-mini",
-          schema: z.object({
-            title: z.string(),
-          }),
-          prompt: `Your role is to create a title for an AI chat conversation using the "system prompt" and "user message" I provide below.\n
-            "system prompt" : ${systemPrompt}\n
-            "user message" : ${userText}\n
-            `,
-        })
-        await updateChatTitle(chatId, title)
-      }
-      // Convert previous messages from database format to UI format
-      const previousUIMessages = convertSelectMessagesToChatUIMessages(previousMessages)
-      // Add the current user message to the conversation (avoid duplicate if already saved)
-      const messageAlreadyInHistory = previousUIMessages.some(msg => msg.id === message.id)
-      const allMessages = messageAlreadyInHistory 
-        ? previousUIMessages 
-        : [...previousUIMessages, message]
-      validatedMessages = await validateUIMessages({
-        messages: allMessages,
-      })
-    }
+
+  // 1) Create agent with the selected model (default to gpt-4o-mini if not provided)
+  const selectedModelId = modelId || 'openai/gpt-4o-mini';
+  const agent = createRenewalAgent(selectedModelId);
   
-    // 2) Build a UI message stream (SSE)
-    const stream = createUIMessageStream<ChatMessage>({
-      execute: async ({ writer }) => {
-        // Merge LLM output into the same SSE stream
-        if (message && validatedMessages.length > 0 && chatId) {
-          const llm = streamText({
-            model: model || "openai/gpt-5-mini",
-            messages: convertToModelMessages(validatedMessages),
-            system: systemPrompt,
-            abortSignal: req.signal,
-            stopWhen: stepCountIs(10),
-            tools: {
-              getLossTrends: {
-                description: "loss frequency/severity by year for an account",
-                inputSchema: z.object({
-                  accountId: z.string(),
-                }),
-                execute: async ({ accountId }) => fetchJson(`/api/mocks/losses/${accountId}`),
-              },
-              extractSov: {
-                description: "Parse SOV and normalize values",
-                inputSchema: z.object({
-                  sovFileId: z.string(),
-                }),
-                execute: async ({ sovFileId }) => fetchJson(`/api/mocks/sov/${sovFileId}`),
-              },
-              startRenewalWorkflow: {
-                description: "Kick off durable orchestration of renewal workflow",
-                inputSchema: z.object({
-                  accountId: z.string(),
-                  effectiveDate: z.string(),
-                  sovFileId: z.string(),
-                  state: z.string(),
-                  brokerEmail: z.string(),
-                  carriers: z.array(z.string()),
-                }),
-                execute: async (accountData: RenewalInput) => {
-                  const response = await start(renewal, [accountData])
-                  return response
-                },
-              },
-            },
-          })
-          writer.merge(llm.toUIMessageStream())
-        }
-      },
-      onFinish: async ({ responseMessage }) => {
+  // 2) Run the agent as a stream
+  // Note: The SDK should handle continuing after approval, but there's a bug where it
+  // looks for tool invocations in the current message instead of the last message.
+  // This might be a known issue with AI SDK 6 Beta.
+  const agentStream = await createAgentUIStream({
+    agent,
+    messages: validatedMessages,
+    sendStart: true,
+    sendFinish: true,
+    onFinish: async ({ responseMessage }: any) => {
         // Save the AI assistant's response after streaming completes
-        if (chatId && responseMessage) {
-          const assistantMessages = convertUIMessagesToNewMessages([responseMessage as any as ChatUIMessage], chatId)
-          await saveChatMessages({ messages: assistantMessages })
+        if (responseMessage && responseMessage.id && chatId) {
+          const assistantMessages = convertUIMessagesToNewMessages([responseMessage as any as ChatUIMessage], chatId);
+          await saveChatMessages({ messages: assistantMessages });
         }
       },
-    })
+  });
 
-    return createUIMessageStreamResponse({ stream })
-  }
+  return createUIMessageStreamResponse({ stream: agentStream });
+  // 4) Return SSE
+//   return createUIMessageStreamResponse({ stream: ui });
+}
   

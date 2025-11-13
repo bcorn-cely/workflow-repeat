@@ -31,6 +31,7 @@ const NOTIFY = process.env.NOTIFY ?? `${BASE}/api/mocks`;
 
 export async function extractSoV(fileId: string) {
   "use step";
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Sleep for 2 seconds
   const res = await fetch(`${DOCSVC}/sov/${fileId}`);
   if (!res.ok) throw new Error(`extractSoV failed: ${res.status}`);
   return res.json();
@@ -39,13 +40,17 @@ export async function extractSoV(fileId: string) {
 
 export async function getLossTrends(accountId: string) {
   "use step";
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Sleep for 2 seconds
   const res = await fetch(`${LOSS}/losses/${accountId}`);
   if (!res.ok) throw new Error(`loss trends failed: ${res.status}`);
   return res.json();
 }
 
+getLossTrends.maxRetries = 3;
+
 export async function quoteCarrier(carrier: string, sov: any, loss: any) {
   "use step";
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Sleep for 2 seconds
   const res = await fetch(`${QUOTE}/quote/carrier/${carrier}`, {
     method: 'POST',
     body: JSON.stringify({ sov, loss }),
@@ -62,6 +67,7 @@ export async function quoteCarrier(carrier: string, sov: any, loss: any) {
 
 export async function complianceCheck(input: { quotes: any[]; state: string }) {
   "use step";
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Sleep for 2 seconds
   const ok = input.quotes.length > 0;
   return ok ? { ok: true } : { ok: false, reasons: ['No bindable quotes'] };
 }
@@ -87,6 +93,8 @@ export async function compileMarketSummary(payload: any) {
 export async function sendBrokerApprovalRequest(token: string, brokerEmail: string) {
   "use step";
   
+  // Create approval URL that points to the approval page
+  // The page will handle making the POST request to the API endpoint
   const approvalUrl = `${BASE}/renewals/approve?token=${encodeURIComponent(token)}`;
 
   // Send the email
