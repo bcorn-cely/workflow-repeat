@@ -115,7 +115,7 @@ function RenewalApprovalContent() {
             </Button>
             <Button
               onClick={() => handleApproval(false)}
-              variant="outline"
+              variant="destructive"
               className="flex-1"
               size="lg"
             >

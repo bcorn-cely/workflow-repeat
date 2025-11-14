@@ -5,7 +5,6 @@ import {
   validateUIMessages,
 } from 'ai';
 import { createRenewalAgent } from '@/workflows/renewals/agent/renewal-agent';
-import { getRun } from 'workflow/api';
 import { loadChatMessages, convertSelectMessagesToChatUIMessages, convertUIMessagesToNewMessages, saveChatMessages, getChat, type ChatUIMessage } from '@/lib/chat';
 import { createChat } from '@/db/operations/chat';
 
@@ -53,8 +52,6 @@ export async function POST(req: Request) {
     }
   }
 
-  console.log(`allMessages: ${chatId}`, allMessages);
-
   // Filter out invalid messages (empty parts, etc.) before validation
   const validMessages = allMessages.filter((message) => {
     // Messages must have at least one part
@@ -64,7 +61,6 @@ export async function POST(req: Request) {
     return true;
   });
 
-  console.log(`validMessages: ${chatId}`, validMessages);
 
   // Validate messages
   const validatedMessages = await validateUIMessages({
@@ -85,17 +81,15 @@ export async function POST(req: Request) {
     messages: validatedMessages,
     sendStart: true,
     sendFinish: true,
-    onFinish: async ({ responseMessage }: any) => {
-        // Save the AI assistant's response after streaming completes
-        if (responseMessage && responseMessage.id && chatId) {
-          const assistantMessages = convertUIMessagesToNewMessages([responseMessage as any as ChatUIMessage], chatId);
-          await saveChatMessages({ messages: assistantMessages });
-        }
-      },
+    // onFinish: async ({ responseMessage }: any) => {
+    //     // Save the AI assistant's response after streaming completes
+    //     if (responseMessage && responseMessage.id && chatId) {
+    //       const assistantMessages = convertUIMessagesToNewMessages([responseMessage as any as ChatUIMessage], chatId);
+    //       await saveChatMessages({ messages: assistantMessages });
+    //     }
+    //   },
   });
-
+  // @ts-ignore
   return createUIMessageStreamResponse({ stream: agentStream });
-  // 4) Return SSE
-//   return createUIMessageStreamResponse({ stream: ui });
 }
   

@@ -214,7 +214,7 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
               <div className="flex items-center justify-between" style={{ contain: 'layout style' }}>
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
-                  <h3 className="font-semibold text-lg">Newfront Intelligence</h3>
+                  <h3 className="font-semibold text-lg">Forcepoint Intelligence</h3>
                 </div>
                 <div className="flex items-center gap-2 relative" style={{ contain: 'layout', transform: 'translateZ(0)' }}>
                   <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
@@ -284,7 +284,7 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                     <Sparkles className="h-8 w-8 text-primary" />
                   </div>
-                  <p className="text-base font-medium text-foreground mb-2">Welcome to Newfront Intelligence</p>
+                  <p className="text-base font-medium text-foreground mb-2">Welcome to Forcepoint Intelligence</p>
                   <p className="text-sm mb-4">I can help you with:</p>
                   <div className="grid gap-2 text-left max-w-xs mx-auto">
                     <div className="flex items-start gap-2 text-sm">

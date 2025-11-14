@@ -49,7 +49,7 @@ export function Header() {
               </div>
               <div className="flex flex-col">
                 <span className="font-serif text-lg font-bold leading-none tracking-tight text-foreground">
-                  NEWFRONT
+                Forcepoint Intelligence
                 </span>
                 <span className="text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground">
                   Intelligence

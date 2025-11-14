@@ -17,7 +17,7 @@ export function HeroSection() {
 
         <p className="mb-10 max-w-3xl text-pretty text-lg leading-relaxed text-foreground/80 md:text-xl">
           Streamline policy inquiries, automate risk assessments, and access real-time data insights. Built specifically
-          for Newfront teams to work faster and smarter.
+          for Forcepoint teams to work faster and smarter.
         </p>
 
         <div className="flex flex-wrap items-center gap-4">

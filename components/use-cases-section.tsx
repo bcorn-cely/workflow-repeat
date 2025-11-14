@@ -59,7 +59,7 @@ export function UseCasesSection() {
               Built for Real Insurance Workflows
             </h2>
             <p className="mx-auto max-w-2xl text-pretty text-lg leading-relaxed text-foreground/80">
-              See how Newfront Intelligence streamlines your daily operations
+              See how Forcepoint Intelligence streamlines your daily operations
             </p>
           </div>
 

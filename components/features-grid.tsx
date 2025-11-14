@@ -57,7 +57,7 @@ export function FeaturesGrid() {
     {
       icon: Database,
       title: "Data Integration",
-      description: "Seamlessly connected to all Newfront systems for comprehensive data access.",
+      description: "Seamlessly connected to all Forcepoint systems for comprehensive data access.",
       delay: "delay-300",
     },
     {
