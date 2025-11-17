@@ -1,5 +1,6 @@
 // workflows/renewal.ts
 import { FatalError, RetryableError } from 'workflow';
+import { UIMessageChunk } from 'ai';
 import { aiTell } from '../events';
 
 
@@ -20,11 +21,11 @@ export type RenewalResult = {
 };
 
 const BASE = process.env.APP_BASE_URL ?? 'http://localhost:3000';
-const DOCSVC = process.env.DOCSVC ?? `${BASE}/api/mocks`;
-const LOSS   = process.env.LOSS   ?? `${BASE}/api/mocks`;
-const QUOTE  = process.env.QUOTE  ?? `${BASE}/api/mocks`;
-const SUMMARY= process.env.SUMMARY?? `${BASE}/api/mocks`;
-const NOTIFY = process.env.NOTIFY ?? `${BASE}/api/mocks`;
+const DOCSVC = process.env.DOCSVC ?? `${BASE}/api/mocks/newfront`;
+const LOSS   = process.env.LOSS   ?? `${BASE}/api/mocks/newfront`;
+const QUOTE  = process.env.QUOTE  ?? `${BASE}/api/mocks/newfront`;
+const SUMMARY= process.env.SUMMARY?? `${BASE}/api/mocks/newfront`;
+const NOTIFY = process.env.NOTIFY ?? `${BASE}/api/mocks/newfront`;
 
 
 /** ---------- Durable steps ---------- */
@@ -90,7 +91,7 @@ export async function compileMarketSummary(payload: any) {
  * Step function that sends approval request email and emits notification.
  * Hook creation/awaiting happens in the workflow, not here.
  */
-export async function sendBrokerApprovalRequest(token: string, brokerEmail: string) {
+export async function sendBrokerApprovalRequest(writable: WritableStream<UIMessageChunk>, token: string, brokerEmail: string) {
   "use step";
   
   // Create approval URL that points to the approval page
@@ -101,7 +102,7 @@ export async function sendBrokerApprovalRequest(token: string, brokerEmail: stri
   await sendApprovalRequest(brokerEmail, approvalUrl);
 
   // Stream a chat notice
-  await aiTell(
+  await aiTell(writable,
     `I've emailed ${brokerEmail} a secure approval link. Please check your inbox to continue.`,
     { token, approvalUrl, brokerEmail }
   );

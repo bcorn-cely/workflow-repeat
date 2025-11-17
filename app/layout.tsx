@@ -12,7 +12,7 @@ const _cormorantGaramond = Cormorant_Garamond({
 })
 
 export const metadata: Metadata = {
-  title: "Newfront Intelligence - AI Assistant",
+  title: "Forcepoint Intelligence - AI Assistant",
   description: "Newfront Insurance Internal AI Assistant",
   generator: "v0.app",
   icons: {

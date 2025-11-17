@@ -1,12 +1,15 @@
 import {
     // @ts-ignore
-  createAgentUIStream,
   createUIMessageStreamResponse,
   validateUIMessages,
+  convertToModelMessages,
+  createUIMessageStream,
+  generateId,
 } from 'ai';
-import { createRenewalAgent } from '@/workflows/newfront/agent/renewal-agent';
+import { createInsuranceAgent } from '@/workflows/included-health/agent/insurance-agent';
 import { loadChatMessages, convertSelectMessagesToChatUIMessages, convertUIMessagesToNewMessages, saveChatMessages, getChat, type ChatUIMessage } from '@/lib/chat';
 import { createChat } from '@/db/operations/chat';
+import { start } from 'workflow/api';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +23,7 @@ export async function POST(req: Request) {
     chatId?: string;
     model?: string;
   };
-
+  console.log('model id ', modelId);
   // Handle chat history if chatId is provided
   // IMPORTANT: When messages are provided (including after approval), use them directly
   // The client sends the complete conversation state, so we should trust it
@@ -67,32 +70,33 @@ export async function POST(req: Request) {
     messages: validMessages,
   });
 
+  const modelMessages = convertToModelMessages(validatedMessages);
+
 
   // 1) Create agent with the selected model (default to gpt-4o-mini if not provided)
   const selectedModelId = modelId || 'openai/gpt-4o-mini';
-  const agent = createRenewalAgent(selectedModelId);
-  
-  // 2) Run the agent as a stream
-  // Note: The SDK should handle continuing after approval, but there's a bug where it
-  // looks for tool invocations in the current message instead of the last message.
-  // This might be a known issue with AI SDK 6 Beta.
-  const agentStream = await createAgentUIStream({
-    agent,
-    messages: validatedMessages,
-    sendStart: true,
-    sendFinish: true,
-    onFinish: async ({ responseMessage }: any) => {
-        // Save the AI assistant's response after streaming completes
+
+  const run = await start(createInsuranceAgent, [modelMessages, selectedModelId]);
+
+  const wrappedStream = createUIMessageStream({
+    execute: async ({writer}) => {
+        writer.merge(run.readable);
+    },
+    onFinish: async ({responseMessage}) => {
         console.log('responseMessage', responseMessage);
-        if (responseMessage && responseMessage.id && chatId) {
-            console.log('made it inside to save message ', responseMessage);
-         
-          const assistantMessages = convertUIMessagesToNewMessages([responseMessage as any as ChatUIMessage], chatId);
-          await saveChatMessages({ messages: assistantMessages });
+        const newResponseMessage = responseMessage as ChatUIMessage;
+        newResponseMessage.id =  newResponseMessage.id || generateId();
+        if (responseMessage && chatId) {
+            const assistantMessages = convertUIMessagesToNewMessages([newResponseMessage], chatId);
+            await saveChatMessages({ messages: assistantMessages });
         }
-      },
-  });
+        if('approval' in responseMessage) {
+            console.log('approval', responseMessage.approval);
+        }
+        
+    }
+  })
   // @ts-ignore
-  return createUIMessageStreamResponse({ stream: agentStream });
+  return createUIMessageStreamResponse({ stream: wrappedStream });
 }
   

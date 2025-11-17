@@ -1,5 +1,5 @@
 // app/api/workflows/renewal/approve/route.ts
-import { brokerApprovalHook } from "@/workflows/renewals/hooks";
+import { brokerApprovalHook } from "@/workflows/newfront/hooks";
 
 export async function POST(req: Request) {
   const { token: rawToken, approved, comment, by } = await req.json();

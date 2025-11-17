@@ -4,7 +4,7 @@ import { ToolLoopAgent, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { start } from 'workflow/api';
 import { gateway } from '@/lib/ai/provider';
-import { renewal } from '@/workflows/renewals/workflow';
+import { renewal } from '@/workflows/newfront/workflow';
 
 async function fetchJson(path: string) {
   const res = await fetch(path);
@@ -21,12 +21,12 @@ export function createRenewalAgent(modelId: string = 'openai/gpt-4o-mini') {
       getLossTrends: tool({
         description: 'Loss frequency/severity by year for an account',
         inputSchema: z.object({ accountId: z.string() }),
-        execute: async ({ accountId }) => fetchJson(`/api/mocks/losses/${accountId}`),
+        execute: async ({ accountId }) => fetchJson(`/api/mocks/newfront/losses/${accountId}`),
       }),
       extractSov: tool({
         description: 'Parse SOV and normalize values',
         inputSchema: z.object({ sovFileId: z.string() }),
-        execute: async ({ sovFileId }) => fetchJson(`/api/mocks/sov/${sovFileId}`),
+        execute: async ({ sovFileId }) => fetchJson(`/api/mocks/newfront/sov/${sovFileId}`),
       }),
       startRenewalWorkflow: {
         ...tool({

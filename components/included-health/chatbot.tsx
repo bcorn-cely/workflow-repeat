@@ -7,7 +7,7 @@ import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalRespons
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { X, Send, Sparkles, Maximize2, Minimize2, Settings } from "lucide-react"
+import { X, Send, Maximize2, Minimize2, Settings, Heart } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { setChatIdCookie } from "@/actions"
 import { ThinkingLoader } from "@/components/thinking-loader"
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 // Tool view component for rendering tool invocations inline
-function RenewalWorkflowToolView({ 
+function CareNavigationToolView({ 
   invocation, 
   addToolApprovalResponse 
 }: { 
@@ -70,9 +70,11 @@ function RenewalWorkflowToolView({
   if (invocation.state === 'output-available') {
     return (
       <div className="max-w-[85%] text-xs bg-slate-50 dark:bg-slate-900 border rounded p-2 overflow-x-auto">
-        <div className="font-semibold mb-1">Workflow Started</div>
-        {invocation.output?.runId && (
-          <div className="text-muted-foreground">Run ID: {invocation.output.runId}</div>
+        <div className="font-semibold mb-1">Care Navigation Started</div>
+        {invocation.output?.appointment && (
+          <div className="text-muted-foreground mt-1">
+            Appointment scheduled with {invocation.output.appointment.providerId}
+          </div>
         )}
       </div>
     )
@@ -91,7 +93,7 @@ function RenewalWorkflowToolView({
 }
 
 const AI_MODELS = [
-  { id: "openai/gpt-5-mini", name: "GPT-5 Mini", provider: "OpenAI" },
+  { id: "openai/gpt-5-mini", name: "GPT-4o Mini", provider: "OpenAI" },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "OpenAI" },
   { id: "anthropic/claude-sonnet-4.5", name: "Claude Sonnet 4.5", provider: "Anthropic" },
   { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic" },
@@ -99,14 +101,20 @@ const AI_MODELS = [
   { id: "xai/grok-2-1212", name: "Grok 2", provider: "xAI" },
 ]
 
-export function Chatbot({ id, initialMessages }: { id: string; initialMessages?: UIMessage[] }) {
+export function IncludedHealthChatbot({ id, initialMessages }: { id: string; initialMessages?: UIMessage[] }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isModalMode, setIsModalMode] = useState(false)
-  const [selectedModel, setSelectedModel] = useState<string | undefined>(undefined)
+  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].id)
+  const selectedModelRef = useRef(selectedModel)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
   const [input, setInput] = useState("")
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedModelRef.current = selectedModel
+  }, [selectedModel])
 
   // Setting the chatId Cookie
   useEffect(() => {
@@ -119,9 +127,9 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
     id,
     messages: initialMessages,
     transport: new DefaultChatTransport({
-      api: "/api/chat",
+      api: "/api/chat/included-health",
       prepareSendMessagesRequest({ messages, id }: { messages: UIMessage[]; id: string }) {
-        return { body: { messages, chatId: id, model: selectedModel } };
+        return { body: { messages, chatId: id, model: selectedModelRef.current } };
       },
     }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
@@ -193,7 +201,7 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
         )}
         size="icon"
       >
-        {isOpen ? <X className="h-7 w-7" /> : <Sparkles className="h-7 w-7" />}
+        {isOpen ? <X className="h-7 w-7" /> : <Heart className="h-7 w-7" />}
       </Button>
 
       {isOpen && isModalMode && <div className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm" />}
@@ -213,8 +221,8 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
             <div className="px-6 pb-5 pt-4 border-b border-primary/20 bg-gradient-to-r from-primary via-primary/90 to-accent text-primary-foreground rounded-t-xl" style={{ minHeight: 'fit-content' }}>
               <div className="flex items-center justify-between" style={{ contain: 'layout style' }}>
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  <h3 className="font-semibold text-lg">Forcepoint Intelligence</h3>
+                  <Heart className="h-5 w-5" />
+                  <h3 className="font-semibold text-lg">Included Health Assistant</h3>
                 </div>
                 <div className="flex items-center gap-2 relative" style={{ contain: 'layout', transform: 'translateZ(0)' }}>
                   <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
@@ -274,7 +282,7 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
                   </Button>
                 </div>
               </div>
-              <p className="text-sm opacity-90 mt-1">Your AI-powered insurance assistant</p>
+              <p className="text-sm opacity-90 mt-1">Your AI-powered healthcare navigation assistant</p>
             </div>
 
             {/* Messages */}
@@ -282,26 +290,26 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
               {messages.length === 0 && (
                 <div className="text-center text-muted-foreground">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                    <Sparkles className="h-8 w-8 text-primary" />
+                    <Heart className="h-8 w-8 text-primary" />
                   </div>
-                  <p className="text-base font-medium text-foreground mb-2">Welcome to Forcepoint Intelligence</p>
+                  <p className="text-base font-medium text-foreground mb-2">Welcome to Included Health</p>
                   <p className="text-sm mb-4">I can help you with:</p>
                   <div className="grid gap-2 text-left max-w-xs mx-auto">
                     <div className="flex items-start gap-2 text-sm">
                       <span className="text-primary mt-0.5">•</span>
-                      <span>Renewal workflows & policy management</span>
+                      <span>Finding healthcare providers</span>
                     </div>
                     <div className="flex items-start gap-2 text-sm">
                       <span className="text-primary mt-0.5">•</span>
-                      <span>Loss trends & risk analysis</span>
+                      <span>Scheduling appointments</span>
                     </div>
                     <div className="flex items-start gap-2 text-sm">
                       <span className="text-primary mt-0.5">•</span>
-                      <span>SOV extraction & carrier quotes</span>
+                      <span>Verifying insurance coverage</span>
                     </div>
                     <div className="flex items-start gap-2 text-sm">
                       <span className="text-primary mt-0.5">•</span>
-                      <span>Account insights & recommendations</span>
+                      <span>Care navigation & guidance</span>
                     </div>
                   </div>
                 </div>
@@ -353,10 +361,10 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
                           output: part.output,
                         }
                         
-                        // Only render if it's a tool we want to show (e.g., startRenewalWorkflow)
-                        if (toolName === 'startRenewalWorkflow') {
+                        // Only render if it's a tool we want to show (e.g., careNavigation)
+                        if (toolName === 'careNavigation') {
                           return (
-                            <RenewalWorkflowToolView
+                            <CareNavigationToolView
                               key={invocation.id}
                               invocation={invocation}
                               addToolApprovalResponse={addToolApprovalResponse}
@@ -382,7 +390,7 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about renewals, losses, quotes..."
+                  placeholder="Ask about providers, appointments, coverage..."
                   className="flex-1 rounded-xl bg-muted/50 border-border/50 focus-visible:ring-primary"
                   autoComplete="off"
                   disabled={status === "submitted"}
@@ -403,3 +411,4 @@ export function Chatbot({ id, initialMessages }: { id: string; initialMessages?:
     </>
   )
 }
+
