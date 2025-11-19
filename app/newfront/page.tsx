@@ -5,7 +5,7 @@ import { StatsSection } from "@/components/newfront/stats-section"
 import { UseCasesSection } from "@/components/newfront/use-cases-section"
 import { CTASection } from "@/components/newfront/cta-section"
 import { ChatbotWrapper } from "@/components/newfront/chatbot-wrapper"
-import { ParallaxImageSection } from "@/components/parallax-image-section"
+import { ParallaxImageSection } from "@/components/newfront/parallax-image-section"
 
 export default function HomePage() {
   return (
