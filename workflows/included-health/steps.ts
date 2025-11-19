@@ -139,4 +139,3 @@ export async function sendConfirmationEmail(email: string, url: string, details:
     headers: { 'content-type': 'application/json' },
   });
 }
-

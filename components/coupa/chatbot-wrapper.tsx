@@ -20,4 +20,3 @@ export async function CoupaChatbotWrapper() {
 
   return <CoupaChatbot id={chatId} initialMessages={initialMessages}  />
 }
-

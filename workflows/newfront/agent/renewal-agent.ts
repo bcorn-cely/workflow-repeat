@@ -53,4 +53,3 @@ export function createRenewalAgent(modelId: string = 'openai/gpt-4o-mini') {
 
 // Default agent for backward compatibility
 export const renewalAgent = createRenewalAgent();
-

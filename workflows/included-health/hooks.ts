@@ -30,4 +30,3 @@ export type CareReviewResponse = {
   alternativeProviderId?: string;
   reviewedBy?: string;
 };
-

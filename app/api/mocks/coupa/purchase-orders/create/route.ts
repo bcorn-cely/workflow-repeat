@@ -28,4 +28,3 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
   });
 }
-

@@ -411,4 +411,3 @@ export function CoupaChatbot({ id, initialMessages }: { id: string; initialMessa
     </>
   )
 }
-

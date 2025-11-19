@@ -1,4 +1,3 @@
-
 export async function GET(_: Request, { params }: { params: { accountId: string } }) {
   const { accountId } = await params;
   return Response.json({

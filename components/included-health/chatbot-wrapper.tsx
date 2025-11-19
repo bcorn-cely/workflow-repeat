@@ -20,4 +20,3 @@ export async function IncludedHealthChatbotWrapper() {
 
   return <IncludedHealthChatbot id={chatId} initialMessages={initialMessages}  />
 }
-

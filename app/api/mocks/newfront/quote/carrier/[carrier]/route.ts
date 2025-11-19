@@ -22,4 +22,3 @@ export async function POST(req: Request, { params }: { params: QuoteCarrierParam
     terms: 'subject to inspection'
   });
 }
-

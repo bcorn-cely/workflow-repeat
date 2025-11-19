@@ -42,6 +42,3 @@ export async function createProcurementAgent(messages: ModelMessage[], modelId: 
 
     })
 }
-
-
-

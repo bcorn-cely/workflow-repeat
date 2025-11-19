@@ -177,4 +177,3 @@ async function sendCareReviewRequest(token: string, email: string, details: any)
     { token, reviewUrl, email }
   );
 }
-

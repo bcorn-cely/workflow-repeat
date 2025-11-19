@@ -42,4 +42,3 @@ export async function aiTell(writable: WritableStream<UIMessageChunk>, message: 
     data,
   });
 }
-

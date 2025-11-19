@@ -411,4 +411,3 @@ export function IncludedHealthChatbot({ id, initialMessages }: { id: string; ini
     </>
   )
 }
-

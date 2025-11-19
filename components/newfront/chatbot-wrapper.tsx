@@ -19,4 +19,3 @@ export async function ChatbotWrapper() {
 
   return <Chatbot id={chatId} initialMessages={initialMessages}  />
 }
-
