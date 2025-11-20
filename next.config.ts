@@ -11,7 +11,7 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/coupa',
+        destination: '/greenlight',
         permanent: true,
       },
     ]
