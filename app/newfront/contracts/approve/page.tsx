@@ -1,12 +1,12 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Scale, FileText, ShieldCheck, AlertTriangle } from "lucide-react"
 
-export default function ContractApprovalPage() {
+function ContractApprovalContent() {
   const searchParams = useSearchParams()
   const rawToken = searchParams.get("token")
   // Clean the token - remove any trailing quotes, commas, or whitespace that might have been introduced during URL encoding/decoding
@@ -145,6 +145,24 @@ export default function ContractApprovalPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ContractApprovalPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="max-w-md w-full p-8 text-center border-blue-500/20">
+          <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+            <Scale className="h-8 w-8 text-blue-600 animate-pulse" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Loading...</h1>
+          <p className="text-muted-foreground">Preparing contract approval page</p>
+        </Card>
+      </div>
+    }>
+      <ContractApprovalContent />
+    </Suspense>
   )
 }
 
