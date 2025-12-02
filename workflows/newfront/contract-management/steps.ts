@@ -8,18 +8,16 @@
  * 1. draftContract - Generate contract from template
  * 2. extractStructuredData - Extract parties, dates, amounts (cheap model)
  * 3. validateClauses - Check required/optional clauses (cheap model)
- * 4. detectRisks - Identify legal/business risks (premium model)
- * 5. checkPolicyCompliance - Verify persona permissions
- * 6. generateRedline - Create diff document with changes
- * 7. sendApprovalRequest - Route to approvers (manager/legal)
- * 8. archiveContract - Store final contract
+ * 4. checkPolicyCompliance - Verify persona permissions
+ * 5. generateRedline - Create diff document with changes
+ * 6. sendApprovalRequest - Route to approvers (manager/legal)
+ * 7. archiveContract - Store final contract
  */
 
 import { FatalError, fetch } from 'workflow';
 import { generateContractDraft as generateContractDraftAgent } from './agent/subagents/contract-generation-agent';
 import { extractStructuredData as extractStructuredDataAgent } from './agent/subagents/extraction-agent';
 import { validateClauses as validateClausesAgent } from './agent/subagents/clause-validation-agent';
-import { detectRisks as detectRisksAgent } from './agent/subagents/risk-detection-agent';
 
 /**
  * Input type for contract drafting workflow
@@ -62,13 +60,6 @@ export type ContractDraftResult = {
     optional: string[];
     missing: string[];
   };
-  risks: Array<{
-    type: 'risky_clause' | 'missing_term' | 'jurisdiction_conflict' | 'playbook_deviation';
-    severity: 'high' | 'medium' | 'low';
-    clause?: string;
-    description: string;
-    recommendation: string;
-  }>;
   policyViolations: Array<{
     action: string;
     reason: string;
@@ -186,53 +177,7 @@ export async function validateClauses(input: {
 validateClauses.maxRetries = 3;
 
 /**
- * Step 4: Detect Legal and Business Risks
- * 
- * Uses a premium AI model (claude-sonnet-4.5) to identify:
- * - Risky clauses that could expose the company to liability
- * - Missing terms that should be included
- * - Jurisdiction conflicts
- * - Playbook deviations (terms that don't match company standards)
- * 
- * The agent uses tools to:
- * - Check precedents from similar contracts
- * - Compare terms to company playbook standards
- * 
- * Each risk includes:
- * - Type (risky_clause, missing_term, jurisdiction_conflict, playbook_deviation)
- * - Severity (high, medium, low)
- * - Description and recommendation
- * 
- * May require human approval if high-severity risks are detected.
- */
-export async function detectRisks(input: {
-  contractText: string;
-  jurisdiction: string;
-  product: string;
-  contractId: string;
-  contractType: string;
-}) {
-  "use step";
-  
-  try {
-    const result = await detectRisksAgent(input);
-    
-    // Validate result at step level
-    if (result === undefined || result === null) {
-      throw new FatalError(`detectRisks step failed: Agent returned undefined/null for contractId: ${input.contractId}`);
-    }
-    
-    return result;
-  } catch (error) {
-    // Re-throw FatalErrors as-is
-    // Wrap other errors as FatalError with context
-    throw new FatalError(`detectRisks step failed for contractId: ${input.contractId}. Error: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-detectRisks.maxRetries = 5;
-
-/**
- * Step 5: Check Policy Compliance
+ * Step 4: Check Policy Compliance
  * 
  * Verifies that the requested action is allowed for the given persona:
  * - requester: Can draft contracts, cannot approve
@@ -263,7 +208,7 @@ export async function checkPolicyCompliance(input: {
 checkPolicyCompliance.maxRetries = 3;
 
 /**
- * Step 6: Generate Redline Document
+ * Step 5: Generate Redline Document
  * 
  * Creates a diff document showing changes between:
  * - Original contract text
@@ -296,7 +241,7 @@ export async function generateRedline(input: {
 generateRedline.maxRetries = 3;
 
 /**
- * Step 7: Send Approval Request
+ * Step 6: Send Approval Request
  * 
  * Routes approval requests to the appropriate approver:
  * - Contract Manager: Reviews contracts from requesters
@@ -306,7 +251,7 @@ generateRedline.maxRetries = 3;
  * Creates a unique approval token and sends an email with:
  * - Approval URL (links to approval page)
  * - Contract details
- * - Analysis results (clauses, risks, structured data)
+ * - Analysis results (clauses, structured data)
  * 
  * The approval is handled via workflow hooks that pause execution
  * until the approver responds.
@@ -329,7 +274,7 @@ export async function sendApprovalRequest(
  * 
  * Sends an email notification to the approver with FULL CONTEXT:
  * - Full contract text (so human can review everything, not just agent findings)
- * - Agent analysis results (clause validation, risk detection)
+ * - Agent analysis results (clause validation)
  * - Structured data (parties, dates, amounts)
  * - All references and context
  * 
@@ -368,10 +313,6 @@ Optional Clauses: ${(details.clauseValidation.optional || []).join(', ') || 'Non
 ${details.clauseValidation.issues ? `Issues: ${JSON.stringify(details.clauseValidation.issues, null, 2)}` : ''}
 ` : ''}
 
-${details.risks && details.risks.length > 0 ? `=== RISK DETECTION RESULTS ===
-${details.risks.map((r: any) => `- ${r.type} (${r.severity}): ${r.description}\n  Recommendation: ${r.recommendation}`).join('\n\n')}
-` : ''}
-
 ${details.legalApproval ? `=== PREVIOUS APPROVALS ===
 Legal Approval: ${JSON.stringify(details.legalApproval, null, 2)}
 ` : ''}
@@ -394,7 +335,7 @@ Approval URL: ${url}`;
 }
 
 /**
- * Step 8: Archive Contract
+ * Step 7: Archive Contract
  * 
  * Stores the final approved contract with:
  * - Contract ID and version

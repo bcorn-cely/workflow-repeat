@@ -425,7 +425,7 @@ export function ContractChatbot({ id, initialMessages }: { id: string; initialMe
                     </div>
                     <div className="flex items-start gap-2 text-sm text-foreground">
                       <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
-                      <span>Detect risks and missing clauses</span>
+                      <span>Validate clauses and check compliance</span>
                     </div>
                     <div className="flex items-start gap-2 text-sm text-foreground">
                       <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
@@ -527,7 +527,7 @@ export function ContractChatbot({ id, initialMessages }: { id: string; initialMe
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Draft a contract, analyze risks, review clauses..."
+                  placeholder="Draft a contract, validate clauses, review terms..."
                   className="flex-1 rounded-xl bg-background border-border focus-visible:ring-blue-500 text-foreground placeholder:text-muted-foreground"
                   autoComplete="off"
                   disabled={status === "submitted"}

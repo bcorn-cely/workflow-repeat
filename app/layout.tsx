@@ -6,7 +6,7 @@ import "./globals.css"
 
 
 export const metadata: Metadata = {
-  title: "Coupa Intelligence - AI Assistant",
+  title: "Newfront Insurance - AI Assistant",
   description: "Newfront Insurance Internal AI Assistant",
   generator: "v0.app",
   icons: {

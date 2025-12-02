@@ -1,7 +1,7 @@
 // workflows/renewal.ts
 import { FatalError, RetryableError } from 'workflow';
 import { UIMessageChunk } from 'ai';
-import { aiTell } from '../events';
+import { aiTell } from '../../events';
 
 
 export type RenewalInput = {
@@ -91,7 +91,7 @@ export async function compileMarketSummary(payload: any) {
  * Step function that sends approval request email and emits notification.
  * Hook creation/awaiting happens in the workflow, not here.
  */
-export async function sendBrokerApprovalRequest(writable: WritableStream<UIMessageChunk>, token: string, brokerEmail: string) {
+export async function sendBrokerApprovalRequest(token: string, brokerEmail: string) {
   "use step";
   
   // Create approval URL that points to the approval page
@@ -101,11 +101,6 @@ export async function sendBrokerApprovalRequest(writable: WritableStream<UIMessa
   // Send the email
   await sendApprovalRequest(brokerEmail, approvalUrl);
 
-  // Stream a chat notice
-  await aiTell(writable,
-    `I've emailed ${brokerEmail} a secure approval link. Please check your inbox to continue.`,
-    { token, approvalUrl, brokerEmail }
-  );
 }
 
 export async function sendApprovalRequest(email: string, url: string) {

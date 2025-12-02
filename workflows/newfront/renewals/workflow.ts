@@ -1,6 +1,6 @@
 import { sleep, getWritable } from 'workflow';
 import { complianceCheck, extractSoV, getLossTrends, quoteCarrier, RenewalInput, sendBrokerApprovalRequest, compileMarketSummary} from './steps';
-import { emitEvent, aiTell } from '../events';
+import { aiTell } from '../../events';
 import { brokerApprovalHook } from './hooks';
 
 

@@ -9,15 +9,14 @@
  * 2. Draft Contract - Generate from template
  * 3. Extract Structured Data - Extract parties, dates, amounts (cheap model)
  * 4. Validate Clauses - Check required/optional clauses (cheap model)
- * 5. Detect Risks - Identify legal/business risks (premium model)
- * 6. Contract Manager Review - If requester initiated (optional, with timeout)
- * 7. Legal Approval - Required for all contracts (with timeout)
- * 8. Send to Counterparty - External review (separate workflow)
- * 9. Archive Contract - Store final version
+ * 5. Contract Manager Review - If requester initiated (optional, with timeout)
+ * 6. Legal Approval - Required for all contracts (with timeout)
+ * 7. Send to Counterparty - External review (separate workflow)
+ * 8. Archive Contract - Store final version
  * 
  * Key Features:
  * - Persona-based access control (requester/manager/legal)
- * - Model routing (cheap for extraction, premium for risk analysis)
+ * - Model routing (cheap for extraction and validation)
  * - Human-in-the-loop approvals with timeouts
  * - Comprehensive audit logging (cost, latency, model used)
  * - Error handling and retry logic
@@ -29,7 +28,6 @@ import {
   draftContract,
   extractStructuredData,
   validateClauses,
-  detectRisks,
   checkPolicyCompliance,
   generateRedline,
   sendApprovalRequest,
@@ -150,92 +148,8 @@ export async function contractManagement(input: ContractDraftInput) {
     model: 'gpt-5-mini',
   });
 
-  // If high-risk clause validation issues found, require human approval
-  // Human gets FULL CONTEXT: contract + agent analysis + clause library reference
-  if (clauseValidation.needsApproval) {
-    const approvalToken = `${contractId}:clause-validation-approval`;
-    const approval = clauseValidationApprovalHook.create({ token: approvalToken });
 
-    // Send approval email with FULL CONTEXT
-    await sendApprovalRequest(
-      approvalToken,
-      'legal@newfront.com',
-      'clause-validation',
-      {
-        contractId,
-        contractType: input.contractType,
-        draft: draft.contractText,
-        clauseValidation,
-      }
-    );
-
-    const approvalTimeout = '2h';
-    const approvalDecision = await Promise.race([
-      approval,
-      (async () => {
-        await sleep(approvalTimeout);
-        return { approved: false, comment: 'Clause validation approval timeout' };
-      })(),
-    ]);
-
-    if (!approvalDecision.approved) {
-      throw new FatalError(`Clause validation not approved for contractId: ${contractId}. Comment: ${approvalDecision.comment || 'Approval denied'}`);
-    }
-  }
-
-  // ========== Step 5: Detect Risks ==========
-  // Use a premium AI model (claude-sonnet-4.5) for legal risk analysis
-  // This is where we invest in a better model for complex legal reasoning
-  const riskStartTime = Date.now();
-  
-  console.log(`[Contract Workflow] Starting risk detection`, {
-    contractId,
-    contractType: input.contractType,
-    jurisdiction: input.jurisdiction,
-    product: input.product,
-    hasContractText: !!draft?.contractText,
-    contractTextLength: draft?.contractText?.length || 0,
-  });
-  
-  const risks = await detectRisks({
-    contractText: draft.contractText,
-    jurisdiction: input.jurisdiction,
-    product: input.product,
-    contractId,
-    contractType: input.contractType,
-  });
-
-  if (!risks) {
-    throw new FatalError(`[Contract Workflow] Risk detection returned undefined for contractId: ${contractId}`);
-  }
-
-  let riskCount = 0;
-
-  if (Array.isArray(risks)) {
-    riskCount = risks.length
-  }
-  else{
-    riskCount = risks.risks.length;
-  }
-
-
-  const riskLatency = Date.now() - riskStartTime;
-  
-  console.log(`[Contract Workflow] Risk detection complete`, {
-    contractId,
-    riskCount,
-    latency: riskLatency,
-  });
-
-  console.log(`[Contract Workflow] Risk analysis complete`, {
-    contractId,
-    latency: riskLatency,
-    // cost: riskCost,
-    model: 'claude-sonnet-4.5',
-    riskCount: risks,
-  });
-
-  // ========== Step 6: Contract Manager Review ==========
+  // ========== Step 5: Contract Manager Review ==========
   // If a requester (non-manager) initiated this, route to contract manager for review
   // This is an optional step that only happens for requester-initiated contracts
   // The workflow pauses here and waits for manager approval (with timeout)
@@ -253,7 +167,6 @@ export async function contractManagement(input: ContractDraftInput) {
         draft: draft.contractText,
         structuredData,
         clauseValidation,
-        risks,
       }
     );
 
@@ -287,14 +200,13 @@ export async function contractManagement(input: ContractDraftInput) {
         draft: draft.contractText,
         structuredData,
         clauseValidation,
-        risks,
         managerReview: managerDecision,
         error: 'Manager review not approved',
       };
     }
   }
 
-  // ========== Step 7: Legal Approval ==========
+  // ========== Step 6: Legal Approval ==========
   // Legal approval is REQUIRED for all contracts, regardless of who initiated
   // This is a critical checkpoint that ensures legal compliance
   // The workflow pauses here and waits for legal approval (with timeout)
@@ -306,14 +218,13 @@ export async function contractManagement(input: ContractDraftInput) {
     'legal@newfront.com',
     'legal',
     {
-      contractId,
-      contractType: input.contractType,
-      draft: draft.contractText,
-      structuredData,
-      clauseValidation,
-      risks,
-    }
-  );
+        contractId,
+        contractType: input.contractType,
+        draft: draft.contractText,
+        structuredData,
+        clauseValidation,
+      }
+    );
 
   const legalTimeout = '2h';
   const legalDecision = await Promise.race([
@@ -330,39 +241,16 @@ export async function contractManagement(input: ContractDraftInput) {
       draft: draft.contractText,
       structuredData,
       clauseValidation,
-      risks,
       legalApproval: legalDecision,
       error: 'Legal approval denied or timeout',
     };
   }
 
-  // ========== Step 8: Send to Counterparty ==========
-  // After internal approvals, send contract to external counterparty for review
-  // Note: Counterparty review is handled in a separate workflow
-  // Get counterparty email from parties (party2 is typically the counterparty)
-  const counterpartyEmail = input.parties.party2?.name 
-    ? `${input.parties.party2.name.toLowerCase().replace(/\s+/g, '-')}@example.com`
-    : 'counterparty@example.com';
 
-  await sendApprovalRequest(
-    `${contractId}:counterparty`,
-    counterpartyEmail,
-    'counterparty',
-    {
-      contractId,
-      contractType: input.contractType,
-      draft: draft.contractText,
-      structuredData,
-      clauseValidation,
-      risks,
-      legalApproval: legalDecision,
-    }
-  );
-
-  // Step 9: Archive contract
+  // Step 8: Archive contract
   const archiveStartTime = Date.now();
 
-  const archiveResult = await archiveContract({
+  await archiveContract({
     contractId,
     finalVersion: draft.contractText,
     metadata: {
@@ -371,7 +259,6 @@ export async function contractManagement(input: ContractDraftInput) {
       product: input.product,
       structuredData,
       clauseValidation,
-      risks,
       approvals: {
         legal: legalDecision,
         counterpartySent: true,
@@ -381,7 +268,6 @@ export async function contractManagement(input: ContractDraftInput) {
 
   const archiveLatency = Date.now() - archiveStartTime;
   const totalLatency = Date.now() - startTime;
-  // const totalCost = extractCost + riskCost; // Sum of all AI model costs
 
 
   const contractUrl = `${BASE}/newfront/contracts/${contractId}`;
@@ -393,10 +279,8 @@ export async function contractManagement(input: ContractDraftInput) {
     totalLatency,
     // totalCost,
     extractLatency,
-    riskLatency,
     extractCost,
     archiveLatency,
-    // riskCost,
   });
 
   // Return final result with complete contract data, analysis, and audit trail
@@ -405,7 +289,6 @@ export async function contractManagement(input: ContractDraftInput) {
     draft: draft.contractText,
     structuredData,
     clauseCoverage: clauseValidation,
-    risks,
     policyViolations: [],
     // Audit log tracks all AI operations with cost, latency, and model used
     auditLog: [
@@ -423,14 +306,6 @@ export async function contractManagement(input: ContractDraftInput) {
         model: 'openai/gpt-5-mini',
         cost: extractCost,
         latency: extractLatency,
-      },
-      {
-        timestamp: new Date().toISOString(),
-        persona: input.requesterRole,
-        action: 'risk_detection',
-        model: 'claude-sonnet-4.5',
-        // cost: riskCost,
-        latency: riskLatency,
       },
     ],
     approval: legalDecision,

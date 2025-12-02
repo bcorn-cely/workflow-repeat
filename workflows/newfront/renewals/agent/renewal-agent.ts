@@ -4,7 +4,7 @@ import { ToolLoopAgent, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { start } from 'workflow/api';
 // import { gateway } from '@/lib/ai/provider';
-import { renewal } from '@/workflows/newfront/workflow';
+import { renewal } from '@/workflows/newfront/renewals/workflow';
 
 async function fetchJson(path: string) {
   const res = await fetch(path);

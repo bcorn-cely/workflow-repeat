@@ -12,7 +12,7 @@
  * 
  * Model Routing Strategy:
  * - Simple tasks (questions, explanations) → cheap models (gpt-4o-mini)
- * - Complex tasks (contract drafting, risk analysis) → premium models (claude-sonnet-4.5)
+ * - Complex tasks (contract drafting, clause validation) → premium models (claude-sonnet-4.5)
  * 
  * The agent exposes a single tool: contractDraft, which triggers the full workflow.
  */
@@ -36,7 +36,7 @@ import { start } from 'workflow/api';
  * 3. Returns a runId and contractId for tracking
  */
 const contractDraftTool = tool({
-    description: 'Draft a new contract from templates with guardrails, risk detection, and persona-based access control',
+    description: 'Draft a new contract from templates with guardrails, clause validation, and persona-based access control',
     inputSchema: z.object({
         requesterId: z.string(),
         requesterRole: z.enum(['requester', 'contract_manager', 'legal']),
@@ -92,7 +92,7 @@ const callOptionsSchema = z.object({
  * 
  * Complexity Levels:
  * - Simple: Questions, explanations, definitions → use cheap models (gpt-4o-mini)
- * - Complex: Contract drafting, risk analysis, redlining → use premium models (claude-sonnet-4.5)
+ * - Complex: Contract drafting, clause validation, redlining → use premium models (claude-sonnet-4.5)
  * 
  * The logic checks for keywords in the prompt to classify the task type.
  */
@@ -123,10 +123,10 @@ function determineTaskComplexity(prompt: string | Array<any> | undefined, tools:
                 lowerPrompt.includes('draft') ||
                 lowerPrompt.includes('create') ||
                 lowerPrompt.includes('contract') ||
-                lowerPrompt.includes('risk') ||
                 lowerPrompt.includes('redline') ||
                 lowerPrompt.includes('analyze') ||
-                lowerPrompt.includes('review')
+                lowerPrompt.includes('review') ||
+                lowerPrompt.includes('validate')
             ) {
                 return 'complex';
             }
@@ -187,7 +187,7 @@ export function createContractAgent(defaultModelId: string = 'openai/gpt-4o-mini
     
     const baseSystemPrompt = `You are an AI contract management assistant for Newfront, an insurance brokerage and risk management platform.
 
-**Your role:** Help teams draft, review, negotiate, and manage contracts with guardrails, risk detection, and persona-based access control.
+**Your role:** Help teams draft, review, negotiate, and manage contracts with guardrails, clause validation, and persona-based access control.
 
 **Newfront's Contract Management Context:**
 - Target users: Requesters (draft only), Contract Managers (edit/negotiate), Legal (approve/publish)
@@ -197,7 +197,7 @@ export function createContractAgent(defaultModelId: string = 'openai/gpt-4o-mini
 
 **Core Capabilities:**
 - **Guarded Drafting:** Generate contracts from approved templates and clause libraries
-- **Risk Detection:** Identify risky clauses, missing terms, jurisdiction conflicts, playbook deviations
+- **Clause Validation:** Validate required clauses, check jurisdiction-specific requirements
 - **Persona-Based Access:** Enforce role-based permissions (requester cannot approve, legal cannot draft)
 - **Model Routing:** Use cheap models for extraction/structure, premium models for legal reasoning
 - **Redline Assistance:** Generate diffs with reason codes, track changes between versions
@@ -214,16 +214,16 @@ export function createContractAgent(defaultModelId: string = 'openai/gpt-4o-mini
 2. Check persona permissions before allowing actions
 3. Draft contracts from approved templates with required/optional clauses
 4. Extract structured data (parties, dates, amounts) using cheap models
-5. Detect risks and flag issues using premium models
+5. Validate clauses and check for missing required clauses
 6. Route approvals to appropriate personas (manager → legal)
 7. Generate redlines with reason codes for changes
 8. Provide clear, actionable recommendations with expected impact
 9. Log all actions for audit trail (persona, action, model, cost, latency)
 
 **Demo Context:** 
-This is a demonstration of AI SDK 6, Workflows, and AI Gateway capabilities. Showcase persona-based access control, model routing (cheap vs premium), guardrailed generation, risk detection, and comprehensive audit trails.
+This is a demonstration of AI SDK 6, Workflows, and AI Gateway capabilities. Showcase persona-based access control, model routing (cheap vs premium), guardrailed generation, clause validation, and comprehensive audit trails.
 
-Be professional, legally-aware, and compliance-focused. Guide users through contract management with clarity and confidence. Always format responses in clean, readable markdown with risk indicators and action items where appropriate.`;
+Be professional, legally-aware, and compliance-focused. Guide users through contract management with clarity and confidence. Always format responses in clean, readable markdown with action items where appropriate.`;
 
     const agent = new ToolLoopAgent({
         // Default model (used when no callOptions are provided)
@@ -271,7 +271,7 @@ Be professional, legally-aware, and compliance-focused. Guide users through cont
             }, '\n\n');
 
             // Step 3: Enhance instructions with model information
-            const newInstructions = `${instructions} \n\n You are using the ${selectedModel} model. For contract drafting and risk analysis, inform the user about model selection and cost implications.`;
+            const newInstructions = `${instructions} \n\n You are using the ${selectedModel} model. For contract drafting and clause validation, inform the user about model selection and cost implications.`;
 
             // Step 4: Return configured agent settings
             return {

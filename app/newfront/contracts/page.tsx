@@ -34,7 +34,6 @@ const mockContracts = [
     assignee: "requester",
     stage: "Drafting",
     createdAt: "2025-01-15",
-    risks: 2,
   },
   {
     id: "contract:002",
@@ -44,7 +43,6 @@ const mockContracts = [
     assignee: "contract_manager",
     stage: "Manager Review",
     createdAt: "2025-01-14",
-    risks: 0,
   },
   {
     id: "contract:003",
@@ -54,7 +52,6 @@ const mockContracts = [
     assignee: "legal",
     stage: "Legal Approval",
     createdAt: "2025-01-13",
-    risks: 1,
   },
   {
     id: "contract:004",
@@ -64,7 +61,6 @@ const mockContracts = [
     assignee: "legal",
     stage: "Archived",
     createdAt: "2025-01-12",
-    risks: 0,
   },
 ]
 
@@ -117,7 +113,7 @@ export default function ContractsPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Contract Management</h1>
           <p className="text-muted-foreground">
-            AI-powered contract drafting, risk detection, and workflow orchestration
+            AI-powered contract drafting, clause validation, and workflow orchestration
           </p>
         </div>
 
@@ -218,7 +214,6 @@ export default function ContractsPage() {
                 <TableHead>Status</TableHead>
                 <TableHead>Stage</TableHead>
                 <TableHead>Assignee</TableHead>
-                <TableHead>Risks</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -249,19 +244,6 @@ export default function ContractsPage() {
                     <Badge variant="outline" className="capitalize">
                       {contract.assignee.replace("_", " ")}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {contract.risks > 0 ? (
-                      <div className="flex items-center gap-1 text-orange-600">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span>{contract.risks}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 text-green-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>0</span>
-                      </div>
-                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {contract.createdAt}
