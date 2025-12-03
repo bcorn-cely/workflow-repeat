@@ -6,8 +6,8 @@ import "./globals.css"
 
 
 export const metadata: Metadata = {
-  title: "Newfront Insurance - AI Assistant",
-  description: "Newfront Insurance Internal AI Assistant",
+  title: "IMAX Content Intelligence - AI Assistant",
+  description: "IMAX Content Review and Distribution Platform",
   generator: "v0.app",
   icons: {
     icon: [
