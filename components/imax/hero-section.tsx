@@ -19,7 +19,7 @@ export function HeroSection() {
         </div>
 
         <h1 className="mb-6 font-serif text-balance text-5xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl">
-          Transforming Content Distribution
+          Transforming Content Distribution: preview deployment visible text
         </h1>
 
         <p className="mb-10 max-w-3xl text-pretty text-lg leading-relaxed text-foreground/80 md:text-xl">
