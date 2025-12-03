@@ -11,8 +11,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { contentReleaseApprovalHook } from '@/workflows/imax/content-review/hooks';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 /**
  * POST Handler for Content Release Approval
@@ -53,15 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Resolve the approval hook with the decision
-    await contentReleaseApprovalHook.resolve({
-      token,
-      result: {
-        approved,
-        comment,
-        by: by || 'content-manager@imax.com',
-        releaseNotes,
-      },
-    });
+    await contentReleaseApprovalHook.resume(token, { approved, comment, by, releaseNotes });
 
     return NextResponse.json({
       success: true,
