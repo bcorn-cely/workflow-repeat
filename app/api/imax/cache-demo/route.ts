@@ -65,14 +65,7 @@ async function getCachedData() {
 export async function GET(request: NextRequest) {
   const content = await getCachedData();
 
-  const response = NextResponse.json(content, {
-    headers: {
-      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-      'X-Cache-Status': 'HIT',
-      'X-Data-Version': String(content.version),
-      'X-Cache-Tag': 'imax-cache-demo',
-    },
-  });
+  const response = NextResponse.json(content);
 
   return response;
 }
