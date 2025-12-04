@@ -9,7 +9,18 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   async redirects() {
-    return []
+    return [
+  ]
+  },
+  async rewrites() {
+    return {
+      fallback: [
+        {
+          source: '/:path',
+          destination: 'https://imax.com/:path'
+        }
+      ]
+    }
   },
   // Enable Cache Components for Next.js 16
   cacheComponents: true,
