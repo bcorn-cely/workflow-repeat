@@ -35,7 +35,6 @@ import {
   ContractDraftInput,
 } from './steps';
 import { contractApprovalHook, contractManagerReviewHook } from './hooks';
-import { clauseValidationApprovalHook } from './agent/subagents/clause-validation-agent';
 
 const BASE = process.env.APP_BASE_URL ?? 'http://localhost:3000';
 

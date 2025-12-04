@@ -1,5 +1,4 @@
 // app/api/mocks/newfront/contracts/clauses/jurisdiction/route.ts
-export const dynamic = 'force-dynamic';
 
 /**
  * Jurisdiction Rules Endpoint

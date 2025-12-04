@@ -1,5 +1,4 @@
 // app/api/mocks/newfront/contracts/archive/route.ts
-export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const { contractId, finalVersion, metadata } = await req.json();

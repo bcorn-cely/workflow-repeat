@@ -1,5 +1,4 @@
 // app/api/mocks/newfront/contracts/extract/route.ts
-export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const { text } = await req.json();
@@ -15,7 +14,7 @@ export async function POST(req: Request) {
   // Extract parties (look for patterns like "Party Name" ("Role"))
   const partyMatches = text.match(/([A-Z][a-zA-Z\s&]+)\s*\(["']([^"']+)["']\)/g);
   if (partyMatches) {
-    partyMatches.forEach(match => {
+    partyMatches.forEach((match: string) => {
       const parts = match.match(/([A-Z][a-zA-Z\s&]+)\s*\(["']([^"']+)["']\)/);
       if (parts) {
         parties.push({ name: parts[1].trim(), role: parts[2] });
@@ -33,7 +32,7 @@ export async function POST(req: Request) {
   datePatterns.forEach(pattern => {
     const matches = text.match(pattern);
     if (matches) {
-      matches.forEach(match => {
+      matches.forEach((match: string) => {
         dates.push({ type: 'date', value: match });
       });
     }
@@ -49,7 +48,7 @@ export async function POST(req: Request) {
   amountPatterns.forEach(pattern => {
     const matches = text.match(pattern);
     if (matches) {
-      matches.forEach(match => {
+      matches.forEach((match: string) => {
         const value = parseFloat(match.replace(/[^0-9.]/g, ''));
         const currency = match.includes('EUR') ? 'EUR' : 'USD';
         amounts.push({ type: 'amount', value, currency });

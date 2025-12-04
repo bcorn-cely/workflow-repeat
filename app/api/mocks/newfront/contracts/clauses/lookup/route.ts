@@ -1,5 +1,4 @@
 // app/api/mocks/newfront/contracts/clauses/lookup/route.ts
-export const dynamic = 'force-dynamic';
 
 /**
  * Clause Lookup Endpoint

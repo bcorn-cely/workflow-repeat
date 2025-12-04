@@ -26,9 +26,7 @@ import { loadChatMessages, convertSelectMessagesToChatUIMessages, convertUIMessa
 import { createChat } from '@/db/operations/chat';
 import { generateId } from 'ai';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60 second timeout for long-running agent calls
+
 
 /**
  * POST Handler for Chat Messages
