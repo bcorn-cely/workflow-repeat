@@ -1,6 +1,5 @@
 // app/api/mocks/newfront/contracts/redline/route.ts
- = 'force-dynamic';
-
+ 
 export async function POST(req: Request) {
   const { originalText, revisedText, reasonCodes } = await req.json();
 

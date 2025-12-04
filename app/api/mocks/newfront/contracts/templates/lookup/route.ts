@@ -1,5 +1,5 @@
 // app/api/mocks/newfront/contracts/templates/lookup/route.ts
- = 'force-dynamic';
+
 
 /**
  * Template Lookup Endpoint

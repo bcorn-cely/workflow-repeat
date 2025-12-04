@@ -1,5 +1,4 @@
 // app/api/mocks/newfront/contracts/templates/route.ts
- = 'force-dynamic';
 
 export async function POST(req: Request) {
   const { contractType, jurisdiction, product, parties, keyTerms } = await req.json();
